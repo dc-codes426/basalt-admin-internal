@@ -15,8 +15,17 @@ struct PingResponse {
     containers: Vec<ContainerStatus>,
 }
 
-async fn health() -> &'static str {
-    "ok"
+async fn health() -> Json<PingResponse> {
+    let (vultiserver, networking, redis) =
+        tokio::join!(check_vultiserver(), check_networking(), check_redis());
+
+    Json(PingResponse {
+        containers: vec![vultiserver, networking, redis],
+    })
+}
+
+async fn ping() -> &'static str {
+    "pong"
 }
 
 async fn check_vultiserver() -> ContainerStatus {
@@ -102,20 +111,11 @@ async fn check_redis() -> ContainerStatus {
     }
 }
 
-async fn ping_containers() -> Json<PingResponse> {
-    let (vultiserver, networking, redis) =
-        tokio::join!(check_vultiserver(), check_networking(), check_redis());
-
-    Json(PingResponse {
-        containers: vec![vultiserver, networking, redis],
-    })
-}
-
 #[tokio::main]
 async fn main() {
     let app = Router::new()
         .route("/health", get(health))
-        .route("/ping", get(ping_containers));
+        .route("/ping", get(ping));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("basalt-admin-internal listening on port 3000");
