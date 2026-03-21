@@ -1,0 +1,20 @@
+[package]
+name = "basalt-vultiserver-client"
+version = "1.0.0"
+authors = ["OpenAPI Generator team and contributors"]
+description = "TSS (Threshold Signature Scheme) server for keygen, keysign, and reshare operations supporting ECDSA, EdDSA, and MLDSA via GG20 and DKLS protocols.  Vultiserver runs an Echo HTTP server and an asynq worker for async TSS operations backed by Redis. Most mutating endpoints enqueue an async task and return immediately. "
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+serde_repr = "^0.1"
+url = "^2.5"
+uuid = { version = "^1.8", features = ["serde", "v4"] }
+reqwest = { version = "^0.13", default-features = false, features = ["json", "multipart", "query", "form"] }
+
+[features]
+default = ["native-tls"]
+native-tls = ["reqwest/native-tls"]
+rustls = ["reqwest/rustls"]

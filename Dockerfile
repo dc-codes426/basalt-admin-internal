@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/li
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
+COPY generated ./generated
 RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release && rm -rf src
 
 COPY src ./src
