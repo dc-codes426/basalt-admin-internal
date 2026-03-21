@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: basalt-admin-internal
+  description: Internal health check service for Basalt infrastructure. Monitors the health of vultiserver, networking, and Redis services.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3001
+    description: Local (host-mapped port)
+  - url: http://basalt-admin-internal:3000
+    description: Docker internal network
+
+paths:
+  /ping:
+    get:
+      summary: Liveness check
+      description: Returns a simple "pong" response indicating the service is running.
+      operationId: ping
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            text/plain:
+              schema:
+                type: string
+                const: pong
+
+  /health:
+    get:
+      summary: Dependency health check
+      description: |
+        Checks the health of all dependent services concurrently:
+        - **vultiserver**: HTTP GET to `http://vultiserver:8080/ping`
+        - **networking**: HTTP GET to `http://networking:8080/health`
+        - **redis**: TCP PING command to `redis:6379`
+
+        Always returns 200; inspect individual `healthy` fields for per-service status.
+      operationId: health
+      responses:
+        "200":
+          description: Health check results for all dependencies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+              examples:
+                all_healthy:
+                  summary: All services healthy
+                  value:
+                    containers:
+                      - name: vultiserver
+                        healthy: true
+                        detail: pong
+                      - name: networking
+                        healthy: true
+                        detail: OK
+                      - name: redis
+                        healthy: true
+                        detail: +PONG
+                partial_failure:
+                  summary: Redis unreachable
+                  value:
+                    containers:
+                      - name: vultiserver
+                        healthy: true
+                        detail: pong
+                      - name: networking
+                        healthy: true
+                        detail: OK
+                      - name: redis
+                        healthy: false
+                        detail: "unreachable: Connection refused (os error 111)"
+
+components:
+  schemas:
+    ContainerStatus:
+      type: object
+      required:
+        - name
+        - healthy
+        - detail
+      properties:
+        name:
+          type: string
+          description: Service name (vultiserver, networking, or redis).
+          examples:
+            - vultiserver
+            - networking
+            - redis
+        healthy:
+          type: boolean
+          description: Whether the service responded successfully.
+        detail:
+          type: string
+          description: Response body on success, or error message on failure.
+
+    PingResponse:
+      type: object
+      required:
+        - containers
+      properties:
+        containers:
+          type: array
+          description: Health status of each monitored service. Always contains exactly three entries.
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/ContainerStatus"
