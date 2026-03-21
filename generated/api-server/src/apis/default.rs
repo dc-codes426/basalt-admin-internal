@@ -12,9 +12,12 @@ use crate::{models, types::*};
 #[must_use]
 #[allow(clippy::large_enum_variant)]
 pub enum HealthResponse {
-    /// Health check results for all dependencies.
-    Status200_HealthCheckResultsForAllDependencies
-    (models::PingResponse)
+    /// All dependencies are healthy.
+    Status200_AllDependenciesAreHealthy
+    (models::PingResponse),
+    /// One or more dependencies are unhealthy.
+    Status503_OneOrMoreDependenciesAreUnhealthy
+    (models::PingResponse),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

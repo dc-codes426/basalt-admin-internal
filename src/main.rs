@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use axum_extra::extract::CookieJar;
 use headers::Host;
 use http::Method;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -45,9 +46,13 @@ impl apis::default::Default for Server {
             check_redis()
         );
 
-        Ok(HealthResponse::Status200_HealthCheckResultsForAllDependencies(
-            models::PingResponse::new(vec![vultiserver, networking, redis]),
-        ))
+        let all_healthy = vultiserver.healthy && networking.healthy && redis.healthy;
+        let response = models::PingResponse::new(vec![vultiserver, networking, redis]);
+        if all_healthy {
+            Ok(HealthResponse::Status200_AllDependenciesAreHealthy(response))
+        } else {
+            Ok(HealthResponse::Status503_OneOrMoreDependenciesAreUnhealthy(response))
+        }
     }
 
     async fn ping(
@@ -78,37 +83,52 @@ async fn check_networking(config: &NetworkingConfig) -> models::ContainerStatus 
 
 async fn check_redis() -> models::ContainerStatus {
     let name = "redis".to_string();
-    match TcpStream::connect("redis:6379").await {
-        Ok(mut stream) => {
-            if let Err(e) = stream.write_all(b"PING\r\n").await {
-                return models::ContainerStatus::new(name, false, format!("write failed: {e}"));
-            }
-            let mut buf = [0u8; 64];
-            match stream.read(&mut buf).await {
-                Ok(n) => {
-                    let response = String::from_utf8_lossy(&buf[..n]);
-                    let healthy = response.contains("PONG");
-                    models::ContainerStatus::new(name, healthy, response.trim().to_string())
-                }
-                Err(e) => models::ContainerStatus::new(name, false, format!("read failed: {e}")),
-            }
+    let timeout = Duration::from_secs(5);
+    let result = tokio::time::timeout(timeout, async {
+        let mut stream = TcpStream::connect("redis:6379").await?;
+        stream.write_all(b"PING\r\n").await?;
+        let mut buf = [0u8; 64];
+        let n = stream.read(&mut buf).await?;
+        Ok::<_, std::io::Error>(String::from_utf8_lossy(&buf[..n]).trim().to_string())
+    })
+    .await;
+    match result {
+        Ok(Ok(response)) => {
+            let healthy = response.contains("PONG");
+            models::ContainerStatus::new(name, healthy, response)
         }
-        Err(e) => models::ContainerStatus::new(name, false, format!("unreachable: {e}")),
+        Ok(Err(e)) => models::ContainerStatus::new(name, false, format!("unreachable: {e}")),
+        Err(_) => models::ContainerStatus::new(name, false, "timeout".to_string()),
     }
 }
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "basalt_admin_internal=info".parse().unwrap()),
+        )
+        .init();
+
     let vultiserver_url = std::env::var("VULTISERVER_URL")
         .unwrap_or_else(|_| "http://vultiserver:8080".to_string());
     let networking_url = std::env::var("NETWORKING_INTERNAL_URL")
         .unwrap_or_else(|_| "http://networking:8080".to_string());
 
+    let http_client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(10))
+        .build()
+        .expect("failed to build HTTP client");
+
     let mut vultiserver_config = VultiserverConfig::new();
     vultiserver_config.base_path = vultiserver_url;
+    vultiserver_config.client = http_client.clone();
 
     let mut networking_config = NetworkingConfig::new();
     networking_config.base_path = networking_url;
+    networking_config.client = http_client;
 
     let server = Server {
         vultiserver_client: vultiserver_config,
@@ -118,6 +138,6 @@ async fn main() {
     let app = basalt_admin_internal_api_server::server::new(server);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("basalt-admin-internal listening on port 3000");
+    tracing::info!("basalt-admin-internal listening on port 3000");
     axum::serve(listener, app).await.unwrap();
 }

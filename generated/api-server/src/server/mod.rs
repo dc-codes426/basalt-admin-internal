@@ -94,10 +94,28 @@ let result = api_impl.as_ref().health(
 
   let resp = match result {
                                             Ok(rsp) => match rsp {
-                                                apis::default::HealthResponse::Status200_HealthCheckResultsForAllDependencies
+                                                apis::default::HealthResponse::Status200_AllDependenciesAreHealthy
                                                     (body)
                                                 => {
                                                   let mut response = response.status(200);
+                                                  {
+                                                    let mut response_headers = response.headers_mut().unwrap();
+                                                    response_headers.insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_static("application/json"));
+                                                  }
+
+                                                  let body_content =  tokio::task::spawn_blocking(move ||
+                                                      serde_json::to_vec(&body).map_err(|e| {
+                                                        error!(error = ?e);
+                                                        StatusCode::INTERNAL_SERVER_ERROR
+                                                      })).await.unwrap()?;
+                                                  response.body(Body::from(body_content))
+                                                },
+                                                apis::default::HealthResponse::Status503_OneOrMoreDependenciesAreUnhealthy
+                                                    (body)
+                                                => {
+                                                  let mut response = response.status(503);
                                                   {
                                                     let mut response_headers = response.headers_mut().unwrap();
                                                     response_headers.insert(

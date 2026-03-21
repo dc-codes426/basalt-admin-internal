@@ -34,11 +34,11 @@ paths:
         - **networking**: HTTP GET to `http://networking:8080/health`
         - **redis**: TCP PING command to `redis:6379`
 
-        Always returns 200; inspect individual `healthy` fields for per-service status.
+        Returns 200 when all dependencies are healthy, 503 when any dependency is unhealthy.
       operationId: health
       responses:
         "200":
-          description: Health check results for all dependencies.
+          description: All dependencies are healthy.
           content:
             application/json:
               schema:
@@ -57,6 +57,13 @@ paths:
                       - name: redis
                         healthy: true
                         detail: +PONG
+        "503":
+          description: One or more dependencies are unhealthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+              examples:
                 partial_failure:
                   summary: Redis unreachable
                   value:

@@ -9,7 +9,10 @@ axum = "0.8"
 axum-extra = { version = "0.12", features = ["cookie", "typed-header"] }
 headers = "0.4"
 http = "1"
+reqwest = "0.13"
 tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 basalt-admin-internal-api-server = { path = "generated/api-server" }
 basalt-vultiserver-client = { path = "generated/api-clients/vultiserver" }
