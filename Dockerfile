@@ -14,7 +14,11 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 
+RUN adduser --disabled-password --no-create-home appuser
+
 COPY --from=builder /app/target/release/basalt-admin-internal /usr/local/bin/basalt-admin-internal
+
+USER appuser
 
 EXPOSE 3000
 
