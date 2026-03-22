@@ -22,6 +22,8 @@ use basalt_networking_internal_client::apis::default_api as networking_api;
 struct Server {
     vultiserver_client: VultiserverConfig,
     networking_client: NetworkingConfig,
+    redis_addr: String,
+    redis_password: String,
 }
 
 impl AsRef<Server> for Server {
@@ -43,7 +45,7 @@ impl apis::default::Default for Server {
         let (vultiserver, networking, redis) = tokio::join!(
             check_vultiserver(&self.vultiserver_client),
             check_networking(&self.networking_client),
-            check_redis()
+            check_redis(&self.redis_addr, &self.redis_password)
         );
 
         let all_healthy = vultiserver.healthy && networking.healthy && redis.healthy;
@@ -81,12 +83,11 @@ async fn check_networking(config: &NetworkingConfig) -> models::ContainerStatus 
     }
 }
 
-async fn check_redis() -> models::ContainerStatus {
+async fn check_redis(addr: &str, password: &str) -> models::ContainerStatus {
     let name = "redis".to_string();
-    let password = std::env::var("REDIS_PASSWORD").unwrap_or_default();
     let timeout = Duration::from_secs(5);
     let result = tokio::time::timeout(timeout, async {
-        let mut stream = TcpStream::connect("redis:6379").await?;
+        let mut stream = TcpStream::connect(addr).await?;
         if !password.is_empty() {
             stream.write_all(format!("AUTH {password}\r\n").as_bytes()).await?;
             let mut buf = [0u8; 64];
@@ -121,6 +122,10 @@ async fn main() {
         .unwrap_or_else(|_| "http://vultiserver:8080".to_string());
     let networking_url = std::env::var("NETWORKING_INTERNAL_URL")
         .unwrap_or_else(|_| "http://networking:8080".to_string());
+    let redis_host = std::env::var("REDIS_HOST").unwrap_or_else(|_| "redis".to_string());
+    let redis_port = std::env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string());
+    let redis_addr = format!("{redis_host}:{redis_port}");
+    let redis_password = std::env::var("REDIS_PASSWORD").unwrap_or_default();
 
     let http_client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
@@ -139,6 +144,8 @@ async fn main() {
     let server = Server {
         vultiserver_client: vultiserver_config,
         networking_client: networking_config,
+        redis_addr,
+        redis_password,
     };
 
     let app = basalt_admin_internal_api_server::server::new(server);
