@@ -3,8 +3,6 @@ use axum_extra::extract::CookieJar;
 use headers::Host;
 use http::Method;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 
 use basalt_admin_internal_api_server::apis;
 use basalt_admin_internal_api_server::apis::default::{
@@ -22,8 +20,7 @@ use basalt_networking_internal_client::apis::default_api as networking_api;
 struct Server {
     vultiserver_client: VultiserverConfig,
     networking_client: NetworkingConfig,
-    redis_addr: String,
-    redis_password: String,
+    redis_client: redis::Client,
 }
 
 impl AsRef<Server> for Server {
@@ -45,7 +42,7 @@ impl apis::default::Default for Server {
         let (vultiserver, networking, redis) = tokio::join!(
             check_vultiserver(&self.vultiserver_client),
             check_networking(&self.networking_client),
-            check_redis(&self.redis_addr, &self.redis_password)
+            check_redis(&self.redis_client)
         );
 
         let all_healthy = vultiserver.healthy && networking.healthy && redis.healthy;
@@ -83,28 +80,18 @@ async fn check_networking(config: &NetworkingConfig) -> models::ContainerStatus 
     }
 }
 
-async fn check_redis(addr: &str, password: &str) -> models::ContainerStatus {
+async fn check_redis(client: &redis::Client) -> models::ContainerStatus {
     let name = "redis".to_string();
-    let timeout = Duration::from_secs(5);
-    let result = tokio::time::timeout(timeout, async {
-        let mut stream = TcpStream::connect(addr).await?;
-        if !password.is_empty() {
-            stream.write_all(format!("AUTH {password}\r\n").as_bytes()).await?;
-            let mut buf = [0u8; 64];
-            let _ = stream.read(&mut buf).await?;
-        }
-        stream.write_all(b"PING\r\n").await?;
-        let mut buf = [0u8; 64];
-        let n = stream.read(&mut buf).await?;
-        Ok::<_, std::io::Error>(String::from_utf8_lossy(&buf[..n]).trim().to_string())
+    let result = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut conn = client.get_multiplexed_async_connection().await?;
+        redis::cmd("PING")
+            .query_async::<String>(&mut conn)
+            .await
     })
     .await;
     match result {
-        Ok(Ok(response)) => {
-            let healthy = response.contains("PONG");
-            models::ContainerStatus::new(name, healthy, response)
-        }
-        Ok(Err(e)) => models::ContainerStatus::new(name, false, format!("unreachable: {e}")),
+        Ok(Ok(response)) => models::ContainerStatus::new(name, true, response),
+        Ok(Err(e)) => models::ContainerStatus::new(name, false, format!("{e}")),
         Err(_) => models::ContainerStatus::new(name, false, "timeout".to_string()),
     }
 }
@@ -124,8 +111,13 @@ async fn main() {
         .unwrap_or_else(|_| "http://networking:8080".to_string());
     let redis_host = std::env::var("REDIS_HOST").unwrap_or_else(|_| "redis".to_string());
     let redis_port = std::env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string());
-    let redis_addr = format!("{redis_host}:{redis_port}");
     let redis_password = std::env::var("REDIS_PASSWORD").unwrap_or_default();
+    let redis_url = if redis_password.is_empty() {
+        format!("redis://{redis_host}:{redis_port}")
+    } else {
+        format!("redis://:{redis_password}@{redis_host}:{redis_port}")
+    };
+    let redis_client = redis::Client::open(redis_url).expect("invalid redis connection URL");
 
     let http_client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
@@ -144,8 +136,7 @@ async fn main() {
     let server = Server {
         vultiserver_client: vultiserver_config,
         networking_client: networking_config,
-        redis_addr,
-        redis_password,
+        redis_client,
     };
 
     let app = basalt_admin_internal_api_server::server::new(server);
