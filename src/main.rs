@@ -150,7 +150,11 @@ async fn main() {
 
     let app = basalt_admin_internal_api_server::server::new(server);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .expect("failed to bind on 0.0.0.0:3000");
     tracing::info!("basalt-admin-internal listening on port 3000");
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .expect("server failed");
 }
