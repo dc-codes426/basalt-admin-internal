@@ -83,9 +83,15 @@ async fn check_networking(config: &NetworkingConfig) -> models::ContainerStatus 
 
 async fn check_redis() -> models::ContainerStatus {
     let name = "redis".to_string();
+    let password = std::env::var("REDIS_PASSWORD").unwrap_or_default();
     let timeout = Duration::from_secs(5);
     let result = tokio::time::timeout(timeout, async {
         let mut stream = TcpStream::connect("redis:6379").await?;
+        if !password.is_empty() {
+            stream.write_all(format!("AUTH {password}\r\n").as_bytes()).await?;
+            let mut buf = [0u8; 64];
+            let _ = stream.read(&mut buf).await?;
+        }
         stream.write_all(b"PING\r\n").await?;
         let mut buf = [0u8; 64];
         let n = stream.read(&mut buf).await?;
