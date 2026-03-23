@@ -20,6 +20,8 @@ pub struct Server {
     pub vultiserver_client: VultiserverConfig,
     pub networking_client: NetworkingConfig,
     pub redis_client: redis::Client,
+    pub http_client: reqwest::Client,
+    pub auth_url: String,
 }
 
 impl AsRef<Server> for Server {
@@ -38,14 +40,15 @@ impl apis::default::Default for Server {
         _host: &Host,
         _cookies: &CookieJar,
     ) -> Result<HealthResponse, ()> {
-        let (vultiserver, networking, redis) = tokio::join!(
+        let (vultiserver, networking, redis, auth) = tokio::join!(
             checks::check_vultiserver(&self.vultiserver_client),
             checks::check_networking(&self.networking_client),
-            checks::check_redis(&self.redis_client)
+            checks::check_redis(&self.redis_client),
+            checks::check_auth(&self.http_client, &self.auth_url),
         );
 
-        let all_healthy = vultiserver.healthy && networking.healthy && redis.healthy;
-        let response = models::PingResponse::new(vec![vultiserver, networking, redis]);
+        let all_healthy = vultiserver.healthy && networking.healthy && redis.healthy && auth.healthy;
+        let response = models::PingResponse::new(vec![vultiserver, networking, redis, auth]);
         if all_healthy {
             Ok(HealthResponse::Status200_AllDependenciesAreHealthy(response))
         } else {
@@ -76,6 +79,8 @@ async fn main() {
         .unwrap_or_else(|_| "http://vultiserver:8080".to_string());
     let networking_url = std::env::var("NETWORKING_INTERNAL_URL")
         .unwrap_or_else(|_| "http://networking:8080".to_string());
+    let auth_url = std::env::var("AUTH_URL")
+        .unwrap_or_else(|_| "http://auth:3000".to_string());
     let redis_host = std::env::var("REDIS_HOST").unwrap_or_else(|_| "redis".to_string());
     let redis_port = std::env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string());
     let redis_password = std::env::var("REDIS_PASSWORD").unwrap_or_default();
@@ -98,12 +103,14 @@ async fn main() {
 
     let mut networking_config = NetworkingConfig::new();
     networking_config.base_path = networking_url;
-    networking_config.client = http_client;
+    networking_config.client = http_client.clone();
 
     let server = Server {
         vultiserver_client: vultiserver_config,
         networking_client: networking_config,
         redis_client,
+        http_client,
+        auth_url,
     };
 
     let app = basalt_admin_internal_api_server::server::new(server);

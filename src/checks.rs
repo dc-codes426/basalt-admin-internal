@@ -8,6 +8,8 @@ use basalt_vultiserver_client::apis::health_api as vultiserver_health;
 use basalt_networking_internal_client::apis::configuration::Configuration as NetworkingConfig;
 use basalt_networking_internal_client::apis::default_api as networking_api;
 
+use reqwest::Client;
+
 pub async fn check_vultiserver(config: &VultiserverConfig) -> models::ContainerStatus {
     let name = "vultiserver".to_string();
     match vultiserver_health::ping(config).await {
@@ -21,6 +23,24 @@ pub async fn check_networking(config: &NetworkingConfig) -> models::ContainerSta
     match networking_api::health(config).await {
         Ok(body) => models::ContainerStatus::new(name, true, body),
         Err(e) => models::ContainerStatus::new(name, false, format!("unreachable: {e}")),
+    }
+}
+
+pub async fn check_auth(client: &Client, base_url: &str) -> models::ContainerStatus {
+    let name = "auth".to_string();
+    let result = tokio::time::timeout(Duration::from_secs(5), async {
+        client
+            .get(format!("{base_url}/ping"))
+            .send()
+            .await?
+            .text()
+            .await
+    })
+    .await;
+    match result {
+        Ok(Ok(body)) => models::ContainerStatus::new(name, true, body),
+        Ok(Err(e)) => models::ContainerStatus::new(name, false, format!("unreachable: {e}")),
+        Err(_) => models::ContainerStatus::new(name, false, "timeout".to_string()),
     }
 }
 
