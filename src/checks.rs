@@ -191,9 +191,29 @@ pub async fn build_health_report(
 
 // --- Periodic log reporting ---
 
-async fn redis_key_count(_client: &redis::Client) -> Option<u64> {
-    // TODO: implement actual key count retrieval
-    None
+async fn minio_object_count(minio: &crate::MinioConfig) -> Result<u64, String> {
+    let provider = minio_rsc::provider::StaticProvider::new(
+        &minio.access_key,
+        &minio.secret_key,
+        None,
+    );
+    let endpoint = minio.endpoint
+        .trim_start_matches("http://")
+        .trim_start_matches("https://");
+    let secure = minio.endpoint.starts_with("https://");
+    let client = minio_rsc::Minio::builder()
+        .endpoint(endpoint)
+        .provider(provider)
+        .secure(secure)
+        .build()
+        .map_err(|e| format!("{e}"))?;
+
+    let result = client
+        .list_objects(&minio.bucket, Default::default())
+        .await
+        .map_err(|e| format!("{e}"))?;
+
+    Ok(result.contents.len() as u64)
 }
 
 pub async fn periodic_log_report(server: Server) {
@@ -210,10 +230,16 @@ pub async fn periodic_log_report(server: Server) {
         )
         .await;
 
-        let key_count = redis_key_count(&server.redis_client).await;
+        let object_count = match minio_object_count(&server.minio).await {
+            Ok(n) => Some(n),
+            Err(e) => {
+                tracing::warn!("failed to count MinIO objects: {e}");
+                None
+            }
+        };
 
         match serde_json::to_string(&report) {
-            Ok(json) => tracing::info!(target: "health_report", report = %json, redis_key_count = ?key_count, "periodic health report"),
+            Ok(json) => tracing::info!(target: "health_report", report = %json, minio_object_count = ?object_count, "periodic health report"),
             Err(e) => tracing::error!("failed to serialize health report: {e}"),
         }
     }

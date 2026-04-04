@@ -16,12 +16,21 @@ use basalt_networking_internal_client::apis::configuration::Configuration as Net
 mod checks;
 
 #[derive(Clone)]
+pub struct MinioConfig {
+    pub endpoint: String,
+    pub bucket: String,
+    pub access_key: String,
+    pub secret_key: String,
+}
+
+#[derive(Clone)]
 pub struct Server {
     pub vultiserver_client: VultiserverConfig,
     pub networking_client: NetworkingConfig,
     pub redis_client: redis::Client,
     pub http_client: reqwest::Client,
     pub auth_url: String,
+    pub minio: MinioConfig,
 }
 
 impl AsRef<Server> for Server {
@@ -81,7 +90,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "basalt_admin_internal=info".parse().unwrap()),
+                .unwrap_or_else(|_| "basalt_admin_internal=info,health_report=info".parse().unwrap()),
         )
         .init();
 
@@ -100,6 +109,17 @@ async fn main() {
         format!("redis://:{redis_password}@{redis_host}:{redis_port}")
     };
     let redis_client = redis::Client::open(redis_url).expect("invalid redis connection URL");
+
+    let minio = MinioConfig {
+        endpoint: std::env::var("MINIO_ENDPOINT")
+            .unwrap_or_else(|_| "http://minio:9000".to_string()),
+        bucket: std::env::var("MINIO_BUCKET")
+            .unwrap_or_else(|_| "vaults".to_string()),
+        access_key: std::env::var("MINIO_ACCESS_KEY")
+            .unwrap_or_else(|_| "admin-internal".to_string()),
+        secret_key: std::env::var("MINIO_SECRET_KEY")
+            .unwrap_or_default(),
+    };
 
     let http_client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
@@ -121,6 +141,7 @@ async fn main() {
         redis_client,
         http_client,
         auth_url,
+        minio,
     };
 
     let app = basalt_admin_internal_api_server::server::new(server.clone());

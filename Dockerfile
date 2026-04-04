@@ -10,11 +10,11 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release && r
 COPY src ./src
 RUN touch src/main.rs && cargo build --release
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 
-RUN adduser --disabled-password --no-create-home appuser
+RUN useradd --no-create-home --shell /usr/sbin/nologin appuser
 
 COPY --from=builder /app/target/release/basalt-admin-internal /usr/local/bin/basalt-admin-internal
 
