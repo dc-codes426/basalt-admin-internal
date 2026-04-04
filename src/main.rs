@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use basalt_admin_internal_api_server::apis;
 use basalt_admin_internal_api_server::apis::default::{
-    HealthResponse, PingResponse as PingApiResponse,
+    HealthReportResponse, HealthResponse, PingResponse as PingApiResponse,
 };
 use basalt_admin_internal_api_server::models;
 
@@ -54,6 +54,16 @@ impl apis::default::Default for Server {
         } else {
             Ok(HealthResponse::Status503_OneOrMoreDependenciesAreUnhealthy(response))
         }
+    }
+
+    async fn health_report(
+        &self,
+        _method: &Method,
+        _host: &Host,
+        _cookies: &CookieJar,
+    ) -> Result<HealthReportResponse, ()> {
+        let report = checks::build_health_report(&self.redis_client, &self.vultiserver_client, &self.networking_client, &self.http_client, &self.auth_url).await;
+        Ok(HealthReportResponse::Status200_ReportGeneratedSuccessfully(report))
     }
 
     async fn ping(

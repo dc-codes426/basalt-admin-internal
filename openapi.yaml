@@ -78,6 +78,125 @@ paths:
                         healthy: false
                         detail: "unreachable: Connection refused (os error 111)"
 
+  /health/report:
+    get:
+      summary: Detailed health report snapshot
+      description: |
+        Runs comprehensive health checks across all services and returns a detailed
+        report with per-check results. This is a point-in-time snapshot suitable for
+        diagnostics and monitoring.
+
+        Each service contains multiple named checks. Each check reports pass/fail status,
+        a human-readable detail string, and optional numeric metrics like latency.
+
+        Top-level and per-service status is one of:
+        - **healthy**: all checks passed
+        - **degraded**: non-critical checks failed (e.g. high memory usage)
+        - **unhealthy**: critical checks failed (e.g. ping, write/read)
+      operationId: healthReport
+      responses:
+        "200":
+          description: Report generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+              examples:
+                all_healthy:
+                  summary: All services healthy
+                  value:
+                    timestamp: "2026-04-03T12:34:56Z"
+                    status: healthy
+                    services:
+                      redis:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "+PONG"
+                            latency_ms: 1.2
+                          memory:
+                            passed: true
+                            detail: "used 12MB / 256MB (4.7%)"
+                          write_read:
+                            passed: true
+                            detail: "round-trip OK"
+                            latency_ms: 2.1
+                          queue_depth:
+                            passed: true
+                            detail: "default:0, scheduled:0"
+                          connected_clients:
+                            passed: true
+                            detail: "5"
+                      vultiserver:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "pong"
+                            latency_ms: 3.4
+                      networking:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "OK"
+                            latency_ms: 2.0
+                      auth:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "pong"
+                            latency_ms: 1.8
+                degraded:
+                  summary: Redis memory high but responsive
+                  value:
+                    timestamp: "2026-04-03T12:35:00Z"
+                    status: degraded
+                    services:
+                      redis:
+                        status: degraded
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "+PONG"
+                            latency_ms: 1.0
+                          memory:
+                            passed: false
+                            detail: "used 220MB / 256MB (85.9%)"
+                          write_read:
+                            passed: true
+                            detail: "round-trip OK"
+                            latency_ms: 1.8
+                          queue_depth:
+                            passed: true
+                            detail: "default:0, scheduled:0"
+                          connected_clients:
+                            passed: true
+                            detail: "12"
+                      vultiserver:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "pong"
+                            latency_ms: 2.1
+                      networking:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "OK"
+                            latency_ms: 1.5
+                      auth:
+                        status: healthy
+                        checks:
+                          ping:
+                            passed: true
+                            detail: "pong"
+                            latency_ms: 1.3
+
 components:
   schemas:
     ContainerStatus:
@@ -113,3 +232,77 @@ components:
           maxItems: 3
           items:
             $ref: "#/components/schemas/ContainerStatus"
+
+    CheckResult:
+      type: object
+      required:
+        - passed
+        - detail
+      properties:
+        passed:
+          type: boolean
+          description: Whether the check passed.
+        detail:
+          type: string
+          description: Human-readable result or error message.
+        latency_ms:
+          type: number
+          format: double
+          description: Round-trip latency in milliseconds, if applicable.
+
+    ServiceReport:
+      type: object
+      required:
+        - status
+        - checks
+      properties:
+        status:
+          $ref: "#/components/schemas/ServiceStatus"
+        checks:
+          type: object
+          description: Named checks for this service. Keys are check names (e.g. ping, memory, write_read).
+          additionalProperties:
+            $ref: "#/components/schemas/CheckResult"
+
+    ServiceStatus:
+      type: string
+      description: |
+        Aggregate status for a service or the overall report.
+        - healthy: all checks passed
+        - degraded: non-critical checks failed
+        - unhealthy: critical checks failed
+      enum:
+        - healthy
+        - degraded
+        - unhealthy
+
+    HealthReport:
+      type: object
+      required:
+        - timestamp
+        - status
+        - services
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the report was generated.
+        status:
+          $ref: "#/components/schemas/ServiceStatus"
+        services:
+          type: object
+          description: Per-service health reports. Keys are service names.
+          required:
+            - redis
+            - vultiserver
+            - networking
+            - auth
+          properties:
+            redis:
+              $ref: "#/components/schemas/ServiceReport"
+            vultiserver:
+              $ref: "#/components/schemas/ServiceReport"
+            networking:
+              $ref: "#/components/schemas/ServiceReport"
+            auth:
+              $ref: "#/components/schemas/ServiceReport"

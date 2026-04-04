@@ -1,6 +1,8 @@
 [package]
 name = "basalt-admin-internal-api-server"
 version = "0.1.0"
+authors = ["OpenAPI Generator team and contributors"]
+description = "Internal health check service for Basalt infrastructure. Monitors the health of vultiserver, networking, and Redis services."
 edition = "2024"
 
 [features]
@@ -18,7 +20,11 @@ conversion = [
 ammonia = "4"
 async-trait = "0.1"
 axum = { version = "0.8", features = ["multipart"] }
-axum-extra = { version = "0.12", features = ["cookie", "query", "typed-header"] }
+axum-extra = { version = "0.12", features = [
+  "cookie",
+  "query",
+  "typed-header",
+] }
 base64 = "0.22"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
@@ -34,7 +40,13 @@ regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_html_form = "0.2"
 serde_json = { version = "1", features = ["raw_value"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", default-features = false, features = [
+    "signal",
+    "rt-multi-thread",
+] }
 tracing = { version = "0.1", features = ["attributes"] }
 uuid = { version = "1", features = ["serde"] }
 validator = { version = "0.20", features = ["derive"] }
+
+[dev-dependencies]
+tracing-subscriber = "0.3"

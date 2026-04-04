@@ -1,3 +1,5 @@
 /target
 pull-clients.sh
+generate-server.sh
+openapitools.json
 

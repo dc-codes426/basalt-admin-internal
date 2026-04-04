@@ -14,10 +14,20 @@ use crate::{models, types::*};
 pub enum HealthResponse {
     /// All dependencies are healthy.
     Status200_AllDependenciesAreHealthy
-    (models::PingResponse),
+    (models::PingResponse)
+    ,
     /// One or more dependencies are unhealthy.
     Status503_OneOrMoreDependenciesAreUnhealthy
-    (models::PingResponse),
+    (models::PingResponse)
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[must_use]
+#[allow(clippy::large_enum_variant)]
+pub enum HealthReportResponse {
+    /// Report generated successfully.
+    Status200_ReportGeneratedSuccessfully
+    (models::HealthReport)
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -46,6 +56,17 @@ pub trait Default<E: std::fmt::Debug + Send + Sync + 'static = ()>: super::Error
     host: &Host,
     cookies: &CookieJar,
     ) -> Result<HealthResponse, E>;
+
+    /// Detailed health report snapshot.
+    ///
+    /// HealthReport - GET /health/report
+    async fn health_report(
+    &self,
+    
+    method: &Method,
+    host: &Host,
+    cookies: &CookieJar,
+    ) -> Result<HealthReportResponse, E>;
 
     /// Liveness check.
     ///
