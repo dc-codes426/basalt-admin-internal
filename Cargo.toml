@@ -19,3 +19,4 @@ basalt-vultiserver-client = { path = "generated/api-clients/vultiserver" }
 basalt-networking-internal-client = { path = "generated/api-clients/networking-internal" }
 redis = { version = "1.1.0", features = ["tokio-comp"] }
 chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1"

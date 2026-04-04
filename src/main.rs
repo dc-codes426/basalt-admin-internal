@@ -123,7 +123,9 @@ async fn main() {
         auth_url,
     };
 
-    let app = basalt_admin_internal_api_server::server::new(server);
+    let app = basalt_admin_internal_api_server::server::new(server.clone());
+
+    tokio::spawn(checks::periodic_log_report(server));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await

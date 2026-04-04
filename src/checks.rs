@@ -11,6 +11,8 @@ use basalt_networking_internal_client::apis::default_api as networking_api;
 
 use reqwest::Client;
 
+use crate::Server;
+
 // --- Individual checks used by /health ---
 
 pub async fn check_vultiserver(config: &VultiserverConfig) -> models::ContainerStatus {
@@ -185,4 +187,34 @@ pub async fn build_health_report(
     };
 
     models::HealthReport::new(chrono::Utc::now(), overall, services)
+}
+
+// --- Periodic log reporting ---
+
+async fn redis_key_count(_client: &redis::Client) -> Option<u64> {
+    // TODO: implement actual key count retrieval
+    None
+}
+
+pub async fn periodic_log_report(server: Server) {
+    let mut interval = tokio::time::interval(Duration::from_secs(60));
+    loop {
+        interval.tick().await;
+
+        let report = build_health_report(
+            &server.redis_client,
+            &server.vultiserver_client,
+            &server.networking_client,
+            &server.http_client,
+            &server.auth_url,
+        )
+        .await;
+
+        let key_count = redis_key_count(&server.redis_client).await;
+
+        match serde_json::to_string(&report) {
+            Ok(json) => tracing::info!(target: "health_report", report = %json, redis_key_count = ?key_count, "periodic health report"),
+            Err(e) => tracing::error!("failed to serialize health report: {e}"),
+        }
+    }
 }

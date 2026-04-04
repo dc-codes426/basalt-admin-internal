@@ -196,6 +196,7 @@ dependencies = [
  "http",
  "redis",
  "reqwest",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
