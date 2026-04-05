@@ -15,8 +15,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 basalt-admin-internal-api-server = { path = "api-server" }
-basalt-vultiserver-client = { path = "generated/api-clients/vultiserver" }
-basalt-networking-internal-client = { path = "generated/api-clients/networking-internal" }
+basalt-vultiserver-client = { path = "api-clients/vultiserver" }
+basalt-networking-internal-client = { path = "api-clients/networking-internal" }
 redis = { version = "1.1.0", features = ["tokio-comp"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"

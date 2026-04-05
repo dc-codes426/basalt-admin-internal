@@ -251,6 +251,7 @@ components:
         latency_ms:
           type: number
           format: double
+          minimum: 0
           description: Round-trip latency in milliseconds, if applicable.
 
     ServiceReport:

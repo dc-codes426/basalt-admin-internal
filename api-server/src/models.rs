@@ -85,6 +85,9 @@ pub struct CheckResult {
 
     /// Round-trip latency in milliseconds, if applicable.
     #[serde(rename = "latency_ms")]
+    #[validate(
+            range(min = 0f64),
+    )]
     #[serde(skip_serializing_if="Option::is_none")]
     pub latency_ms: Option<f64>,
 
