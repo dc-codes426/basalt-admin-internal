@@ -16,6 +16,7 @@ paths:
       summary: Liveness check
       description: Returns a simple "pong" response indicating the service is running.
       operationId: ping
+      tags: [Health]
       responses:
         "200":
           description: Service is alive.
@@ -36,6 +37,7 @@ paths:
 
         Returns 200 when all dependencies are healthy, 503 when any dependency is unhealthy.
       operationId: health
+      tags: [Health]
       responses:
         "200":
           description: All dependencies are healthy.
@@ -94,6 +96,7 @@ paths:
         - **degraded**: non-critical checks failed (e.g. high memory usage)
         - **unhealthy**: critical checks failed (e.g. ping, write/read)
       operationId: healthReport
+      tags: [Health]
       responses:
         "200":
           description: Report generated successfully.

@@ -5,7 +5,7 @@ use http::Method;
 use std::time::Duration;
 
 use basalt_admin_internal_api_server::apis;
-use basalt_admin_internal_api_server::apis::default::{
+use basalt_admin_internal_api_server::apis::health::{
     HealthReportResponse, HealthResponse, PingResponse as PingApiResponse,
 };
 use basalt_admin_internal_api_server::models;
@@ -42,7 +42,7 @@ impl AsRef<Server> for Server {
 impl apis::ErrorHandler for Server {}
 
 #[async_trait]
-impl apis::default::Default for Server {
+impl apis::health::Health for Server {
     async fn health(
         &self,
         _method: &Method,

@@ -25,7 +25,7 @@ use crate::{
 pub fn new<I, A, E>(api_impl: I) -> Router
 where
     I: AsRef<A> + Clone + Send + Sync + 'static,
-    A: apis::default::Default<E> + Send + Sync + 'static,
+    A: apis::health::Health<E> + Send + Sync + 'static,
     E: std::fmt::Debug + Send + Sync + 'static,
     
 {
@@ -63,7 +63,7 @@ async fn health<I, A, E>(
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,
-    A: apis::default::Default<E> + Send + Sync,
+    A: apis::health::Health<E> + Send + Sync,
     E: std::fmt::Debug + Send + Sync + 'static,
         {
 
@@ -97,7 +97,7 @@ let result = api_impl.as_ref().health(
 
   let resp = match result {
                                             Ok(rsp) => match rsp {
-                                                apis::default::HealthResponse::Status200_AllDependenciesAreHealthy
+                                                apis::health::HealthResponse::Status200_AllDependenciesAreHealthy
                                                     (body)
                                                 => {
                                                   let mut response = response.status(200);
@@ -115,7 +115,7 @@ let result = api_impl.as_ref().health(
                                                       })).await.unwrap()?;
                                                   response.body(Body::from(body_content))
                                                 },
-                                                apis::default::HealthResponse::Status503_OneOrMoreDependenciesAreUnhealthy
+                                                apis::health::HealthResponse::Status503_OneOrMoreDependenciesAreUnhealthy
                                                     (body)
                                                 => {
                                                   let mut response = response.status(503);
@@ -165,7 +165,7 @@ async fn health_report<I, A, E>(
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,
-    A: apis::default::Default<E> + Send + Sync,
+    A: apis::health::Health<E> + Send + Sync,
     E: std::fmt::Debug + Send + Sync + 'static,
         {
 
@@ -199,7 +199,7 @@ let result = api_impl.as_ref().health_report(
 
   let resp = match result {
                                             Ok(rsp) => match rsp {
-                                                apis::default::HealthReportResponse::Status200_ReportGeneratedSuccessfully
+                                                apis::health::HealthReportResponse::Status200_ReportGeneratedSuccessfully
                                                     (body)
                                                 => {
                                                   let mut response = response.status(200);
@@ -249,7 +249,7 @@ async fn ping<I, A, E>(
 ) -> Result<Response, StatusCode>
 where
     I: AsRef<A> + Send + Sync,
-    A: apis::default::Default<E> + Send + Sync,
+    A: apis::health::Health<E> + Send + Sync,
     E: std::fmt::Debug + Send + Sync + 'static,
         {
 
@@ -283,7 +283,7 @@ let result = api_impl.as_ref().ping(
 
   let resp = match result {
                                             Ok(rsp) => match rsp {
-                                                apis::default::PingResponse::Status200_ServiceIsAlive
+                                                apis::health::PingResponse::Status200_ServiceIsAlive
                                                     (body)
                                                 => {
                                                   let mut response = response.status(200);
