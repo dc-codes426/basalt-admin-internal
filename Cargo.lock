@@ -254,6 +254,7 @@ name = "basalt-networking-internal-client"
 version = "0.1.0"
 dependencies = [
  "reqwest 0.13.2",
+ "reqwest-middleware",
  "serde",
  "serde_json",
  "serde_repr",
@@ -265,6 +266,7 @@ name = "basalt-vultiserver-client"
 version = "1.0.0"
 dependencies = [
  "reqwest 0.13.2",
+ "reqwest-middleware",
  "serde",
  "serde_json",
  "serde_repr",
@@ -1959,13 +1961,11 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-rustls",
- "hyper-tls",
  "hyper-util",
  "js-sys",
  "log",
  "mime",
  "mime_guess",
- "native-tls",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -1977,7 +1977,6 @@ dependencies = [
  "serde_urlencoded",
  "sync_wrapper",
  "tokio",
- "tokio-native-tls",
  "tokio-rustls",
  "tower",
  "tower-http",
@@ -1986,6 +1985,21 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "reqwest-middleware"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "199dda04a536b532d0cc04d7979e39b1c763ea749bf91507017069c00b96056f"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http",
+ "reqwest 0.13.2",
+ "serde",
+ "thiserror 2.0.18",
+ "tower-service",
 ]
 
 [[package]]

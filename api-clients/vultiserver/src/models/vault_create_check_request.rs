@@ -12,20 +12,16 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct VaultResendRequest {
-    /// 66-character hex-encoded ECDSA public key
-    #[serde(rename = "public_key_ecdsa")]
-    pub public_key_ecdsa: String,
-    /// Vault encryption password
-    #[serde(rename = "password")]
-    pub password: String,
+pub struct VaultCreateCheckRequest {
+    /// Session identifier from the original /vault/create request
+    #[serde(rename = "session_id")]
+    pub session_id: uuid::Uuid,
 }
 
-impl VaultResendRequest {
-    pub fn new(public_key_ecdsa: String, password: String) -> VaultResendRequest {
-        VaultResendRequest {
-            public_key_ecdsa,
-            password,
+impl VaultCreateCheckRequest {
+    pub fn new(session_id: uuid::Uuid) -> VaultCreateCheckRequest {
+        VaultCreateCheckRequest {
+            session_id,
         }
     }
 }

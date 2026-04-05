@@ -13,9 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BatchImportRequest {
-    /// Vault name
-    #[serde(rename = "name")]
-    pub name: String,
     /// Unique session identifier (UUID)
     #[serde(rename = "session_id")]
     pub session_id: uuid::Uuid,
@@ -28,9 +25,6 @@ pub struct BatchImportRequest {
     /// Encryption password for the vault
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
     /// List of protocols to import across (must not contain duplicates)
     #[serde(rename = "protocols")]
     pub protocols: Vec<String>,
@@ -40,14 +34,12 @@ pub struct BatchImportRequest {
 }
 
 impl BatchImportRequest {
-    pub fn new(name: String, session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String, email: String, protocols: Vec<String>, chains: Vec<String>) -> BatchImportRequest {
+    pub fn new(session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String, protocols: Vec<String>, chains: Vec<String>) -> BatchImportRequest {
         BatchImportRequest {
-            name,
             session_id,
             hex_encryption_key,
             local_party_id: None,
             encryption_password,
-            email,
             protocols,
             chains,
         }

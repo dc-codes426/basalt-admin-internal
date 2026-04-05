@@ -25,19 +25,15 @@ pub struct CreateMldsaRequest {
     /// Encryption password for the vault
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
 }
 
 impl CreateMldsaRequest {
-    pub fn new(public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String, email: String) -> CreateMldsaRequest {
+    pub fn new(public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String) -> CreateMldsaRequest {
         CreateMldsaRequest {
             public_key,
             session_id,
             hex_encryption_key,
             encryption_password,
-            email,
         }
     }
 }

@@ -12,29 +12,41 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct VaultGetResponse {
-    /// Hex-encoded ECDSA public key
+pub struct VaultCreateCheckResponse {
+    /// \"ongoing\" while the ceremony is running, \"complete\" when finished
+    #[serde(rename = "status")]
+    pub status: Status,
+    /// Hex-encoded ECDSA public key (present when status is \"complete\")
     #[serde(rename = "public_key_ecdsa", skip_serializing_if = "Option::is_none")]
     pub public_key_ecdsa: Option<String>,
-    /// Hex-encoded EdDSA public key
+    /// Hex-encoded EdDSA public key (present when status is \"complete\")
     #[serde(rename = "public_key_eddsa", skip_serializing_if = "Option::is_none")]
     pub public_key_eddsa: Option<String>,
-    /// Hex-encoded chain code
-    #[serde(rename = "hex_chain_code", skip_serializing_if = "Option::is_none")]
-    pub hex_chain_code: Option<String>,
-    /// Local TSS party identifier
-    #[serde(rename = "local_party_id", skip_serializing_if = "Option::is_none")]
-    pub local_party_id: Option<String>,
 }
 
-impl VaultGetResponse {
-    pub fn new() -> VaultGetResponse {
-        VaultGetResponse {
+impl VaultCreateCheckResponse {
+    pub fn new(status: Status) -> VaultCreateCheckResponse {
+        VaultCreateCheckResponse {
+            status,
             public_key_ecdsa: None,
             public_key_eddsa: None,
-            hex_chain_code: None,
-            local_party_id: None,
         }
+    }
+}
+/// \"ongoing\" while the ceremony is running, \"complete\" when finished
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Status {
+    #[serde(rename = "ongoing")]
+    Ongoing,
+    #[serde(rename = "complete")]
+    Complete,
+    #[serde(rename = "unknown_default_open_api")]
+    UnknownDefaultOpenApi,
+}
+
+impl Default for Status {
+    fn default() -> Status {
+        Self::Ongoing
     }
 }
 

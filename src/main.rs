@@ -129,11 +129,11 @@ async fn main() {
 
     let mut vultiserver_config = VultiserverConfig::new();
     vultiserver_config.base_path = vultiserver_url;
-    vultiserver_config.client = http_client.clone();
+    vultiserver_config.client = http_client.clone().into();
 
     let mut networking_config = NetworkingConfig::new();
     networking_config.base_path = networking_url;
-    networking_config.client = http_client.clone();
+    networking_config.client = http_client.clone().into();
 
     let server = Server {
         vultiserver_client: vultiserver_config,

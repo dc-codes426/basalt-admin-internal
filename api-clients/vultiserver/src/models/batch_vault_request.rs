@@ -13,9 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BatchVaultRequest {
-    /// Vault name
-    #[serde(rename = "name")]
-    pub name: String,
     /// Unique session identifier (UUID)
     #[serde(rename = "session_id")]
     pub session_id: uuid::Uuid,
@@ -31,9 +28,6 @@ pub struct BatchVaultRequest {
     /// Encryption password for the vault
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
     #[serde(rename = "lib_type", skip_serializing_if = "Option::is_none")]
     pub lib_type: Option<models::LibType>,
     /// List of protocols to run keygen across
@@ -45,15 +39,13 @@ pub struct BatchVaultRequest {
 }
 
 impl BatchVaultRequest {
-    pub fn new(name: String, session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String, email: String, protocols: Vec<String>) -> BatchVaultRequest {
+    pub fn new(session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String, protocols: Vec<String>) -> BatchVaultRequest {
         BatchVaultRequest {
-            name,
             session_id,
             hex_encryption_key,
             hex_chain_code,
             local_party_id: None,
             encryption_password,
-            email,
             lib_type: None,
             protocols,
             public_key: None,

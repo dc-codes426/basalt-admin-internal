@@ -19,6 +19,7 @@ use serde_repr::{Serialize_repr,Deserialize_repr};
 pub enum ReshareType {
     Normal = 0,
     Plugin = 1,
+    UnknownDefaultOpenApi = 11184809,
 
 }
 
@@ -27,6 +28,7 @@ impl std::fmt::Display for ReshareType {
         write!(f, "{}", match self {
             Self::Normal => "0",
             Self::Plugin => "1",
+            Self::UnknownDefaultOpenApi => "11184809",
         })
     }
 }

@@ -13,9 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ReshareRequest {
-    /// Vault name
-    #[serde(rename = "name")]
-    pub name: String,
     /// Existing vault public key
     #[serde(rename = "public_key")]
     pub public_key: String,
@@ -37,9 +34,6 @@ pub struct ReshareRequest {
     /// Encryption password (minimum 6 characters)
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
     /// Prefix from previous reshare operation (if any)
     #[serde(rename = "old_reshare_prefix", skip_serializing_if = "Option::is_none")]
     pub old_reshare_prefix: Option<String>,
@@ -50,9 +44,8 @@ pub struct ReshareRequest {
 }
 
 impl ReshareRequest {
-    pub fn new(name: String, public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, old_parties: Vec<String>, encryption_password: String, email: String) -> ReshareRequest {
+    pub fn new(public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, old_parties: Vec<String>, encryption_password: String) -> ReshareRequest {
         ReshareRequest {
-            name,
             public_key,
             session_id,
             hex_encryption_key,
@@ -60,7 +53,6 @@ impl ReshareRequest {
             local_party_id: None,
             old_parties,
             encryption_password,
-            email,
             old_reshare_prefix: None,
             lib_type: None,
             reshare_type: None,

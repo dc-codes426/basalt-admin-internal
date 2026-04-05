@@ -28,9 +28,6 @@ pub struct BatchReshareRequest {
     /// Encryption password for the vault
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
     /// List of party IDs from the previous share set
     #[serde(rename = "old_parties")]
     pub old_parties: Vec<String>,
@@ -40,14 +37,13 @@ pub struct BatchReshareRequest {
 }
 
 impl BatchReshareRequest {
-    pub fn new(public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String, email: String, old_parties: Vec<String>, protocols: Vec<String>) -> BatchReshareRequest {
+    pub fn new(public_key: String, session_id: uuid::Uuid, hex_encryption_key: String, encryption_password: String, old_parties: Vec<String>, protocols: Vec<String>) -> BatchReshareRequest {
         BatchReshareRequest {
             public_key,
             session_id,
             hex_encryption_key,
             local_party_id: None,
             encryption_password,
-            email,
             old_parties,
             protocols,
         }

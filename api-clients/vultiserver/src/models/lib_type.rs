@@ -20,6 +20,7 @@ pub enum LibType {
     GG20 = 0,
     DKLS = 1,
     KeyImport = 2,
+    UnknownDefaultOpenApi = 11184809,
 
 }
 
@@ -29,6 +30,7 @@ impl std::fmt::Display for LibType {
             Self::GG20 => "0",
             Self::DKLS => "1",
             Self::KeyImport => "2",
+            Self::UnknownDefaultOpenApi => "11184809",
         })
     }
 }

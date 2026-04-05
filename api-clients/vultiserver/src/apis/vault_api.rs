@@ -15,6 +15,15 @@ use crate::{apis::ResponseContent, models};
 use super::{Error, configuration, ContentType};
 
 
+/// struct for typed errors of method [`check_vault_creation`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum CheckVaultCreationError {
+    Status400(models::Error),
+    Status404(models::Error),
+    UnknownValue(serde_json::Value),
+}
+
 /// struct for typed errors of method [`create_mldsa_vault`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -94,6 +103,44 @@ pub enum VerifyCodeError {
 }
 
 
+/// Polls the status of an in-progress vault key generation ceremony. Returns \"ongoing\" while the ceremony is still running, or the resulting public keys once the ceremony completes. The server retains ceremony state until this endpoint is called and returns a completed result. 
+pub async fn check_vault_creation(configuration: &configuration::Configuration, vault_create_check_request: models::VaultCreateCheckRequest) -> Result<models::VaultCreateCheckResponse, Error<CheckVaultCreationError>> {
+    // add a prefix to parameters to efficiently prevent name collisions
+    let p_body_vault_create_check_request = vault_create_check_request;
+
+    let uri_str = format!("{}/vault/create/check", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&p_body_vault_create_check_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::VaultCreateCheckResponse`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::VaultCreateCheckResponse`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<CheckVaultCreationError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
 /// Adds a post-quantum ML-DSA (Dilithium) key to an existing vault. The vault must already exist in block storage. Enqueues an async `key:createMldsa` task with a 5-minute timeout. 
 pub async fn create_mldsa_vault(configuration: &configuration::Configuration, create_mldsa_request: models::CreateMldsaRequest) -> Result<(), Error<CreateMldsaVaultError>> {
     // add a prefix to parameters to efficiently prevent name collisions
@@ -122,7 +169,7 @@ pub async fn create_mldsa_vault(configuration: &configuration::Configuration, cr
 }
 
 /// Initiates a new vault key generation ceremony. Enqueues an async `key:generation` (GG20) or `key:generationDKLS` (DKLS) task with a 7-minute timeout. The server participates as one party in the TSS protocol. 
-pub async fn create_vault(configuration: &configuration::Configuration, vault_create_request: models::VaultCreateRequest) -> Result<models::VaultCreateResponse, Error<CreateVaultError>> {
+pub async fn create_vault(configuration: &configuration::Configuration, vault_create_request: models::VaultCreateRequest) -> Result<(), Error<CreateVaultError>> {
     // add a prefix to parameters to efficiently prevent name collisions
     let p_body_vault_create_request = vault_create_request;
 
@@ -138,20 +185,9 @@ pub async fn create_vault(configuration: &configuration::Configuration, vault_cr
     let resp = configuration.client.execute(req).await?;
 
     let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
 
     if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::VaultCreateResponse`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::VaultCreateResponse`")))),
-        }
+        Ok(())
     } else {
         let content = resp.text().await?;
         let entity: Option<CreateVaultError> = serde_json::from_str(&content).ok();

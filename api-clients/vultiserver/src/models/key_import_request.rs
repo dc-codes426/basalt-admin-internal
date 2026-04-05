@@ -13,9 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct KeyImportRequest {
-    /// Vault name
-    #[serde(rename = "name")]
-    pub name: String,
     /// Unique session identifier (UUID)
     #[serde(rename = "session_id")]
     pub session_id: uuid::Uuid,
@@ -31,24 +28,19 @@ pub struct KeyImportRequest {
     /// Encryption password for the vault
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address for vault backup delivery
-    #[serde(rename = "email")]
-    pub email: String,
     /// List of blockchain chains to import (e.g. BTC, ETH)
     #[serde(rename = "chains")]
     pub chains: Vec<String>,
 }
 
 impl KeyImportRequest {
-    pub fn new(name: String, session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String, email: String, chains: Vec<String>) -> KeyImportRequest {
+    pub fn new(session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String, chains: Vec<String>) -> KeyImportRequest {
         KeyImportRequest {
-            name,
             session_id,
             hex_encryption_key,
             hex_chain_code,
             local_party_id: None,
             encryption_password,
-            email,
             chains,
         }
     }

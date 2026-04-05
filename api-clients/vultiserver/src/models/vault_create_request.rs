@@ -13,9 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VaultCreateRequest {
-    /// Human-readable vault name
-    #[serde(rename = "name")]
-    pub name: String,
     /// Unique session identifier (UUID)
     #[serde(rename = "session_id")]
     pub session_id: uuid::Uuid,
@@ -31,23 +28,18 @@ pub struct VaultCreateRequest {
     /// Password used to encrypt the vault backup
     #[serde(rename = "encryption_password")]
     pub encryption_password: String,
-    /// Email address to send the vault backup to
-    #[serde(rename = "email")]
-    pub email: String,
     #[serde(rename = "lib_type", skip_serializing_if = "Option::is_none")]
     pub lib_type: Option<models::LibType>,
 }
 
 impl VaultCreateRequest {
-    pub fn new(name: String, session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String, email: String) -> VaultCreateRequest {
+    pub fn new(session_id: uuid::Uuid, hex_encryption_key: String, hex_chain_code: String, encryption_password: String) -> VaultCreateRequest {
         VaultCreateRequest {
-            name,
             session_id,
             hex_encryption_key,
             hex_chain_code,
             local_party_id: None,
             encryption_password,
-            email,
             lib_type: None,
         }
     }
