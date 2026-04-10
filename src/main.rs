@@ -13,6 +13,7 @@ use basalt_admin_internal_api_server::models;
 use basalt_vultiserver_client::apis::configuration::Configuration as VultiserverConfig;
 use basalt_networking_internal_client::apis::configuration::Configuration as NetworkingConfig;
 
+mod backup;
 mod checks;
 
 #[derive(Clone)]
@@ -146,7 +147,20 @@ async fn main() {
 
     let app = basalt_admin_internal_api_server::server::new(server.clone());
 
-    tokio::spawn(checks::periodic_log_report(server));
+    tokio::spawn(checks::periodic_log_report(server.clone()));
+
+    // Start periodic backup if configured (BACKUP_ENDPOINT must be set).
+    if let Some(backup_config) = backup::BackupConfig::from_env() {
+        tracing::info!(
+            endpoint = %backup_config.endpoint,
+            bucket = %backup_config.bucket,
+            interval_secs = backup_config.interval.as_secs(),
+            "backup enabled"
+        );
+        tokio::spawn(backup::periodic_backup(backup_config, server.minio.clone()));
+    } else {
+        tracing::info!("backup not configured (set BACKUP_ENDPOINT to enable)");
+    }
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
